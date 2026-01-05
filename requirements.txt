@@ -1,0 +1,34 @@
+# CodeAlpha Network Sniffer - Dependencies
+# Task 1: Basic Network Sniffer
+
+# Core packet manipulation library
+scapy>=2.4.0
+
+# Optional dependencies for enhanced functionality
+# (These may already be included with Python 3)
+
+# For advanced network interface handling
+# psutil>=5.8.0
+
+# For JSON logging (if implementing structured logs)
+# python-json-logger>=2.0.0
+
+# For colorized terminal output (optional enhancement)
+# colorama>=0.4.4
+
+# For GUI version (future enhancement)
+# tkinter  # Usually included with Python
+
+# Development dependencies (optional)
+# pytest>=6.0.0  # For testing
+# black>=21.0.0  # For code formatting
+
+# Platform-specific notes:
+# - Linux: Requires root privileges for raw socket access
+# - Windows: May require WinPcap or Npcap installation
+# - macOS: Requires root privileges for raw socket access
+
+# Installation:
+# pip install -r requirements.txt
+# or
+# sudo pip3 install -r requirements.txt

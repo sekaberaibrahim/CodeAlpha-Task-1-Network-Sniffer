@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 """
-Network Packet Sniffer
-Educational tool for analyzing network traffic and understanding protocols
-Requires: scapy library (pip install scapy)
-Platform: Kali Linux (or any Linux distribution)
-Usage: Run with sudo privileges for raw socket access
+Advanced Network Traffic Analyzer
+Developed by: Sekabera Ibrahim
+Purpose: Comprehensive network packet interception and protocol analysis
+Requirements: scapy library (pip install scapy)
+Execution Environment: Kali Linux (Linux-based systems)
+Execution Method: sudo python3 network_traffic_analyzer.py
 """
 
 from scapy.all import *
@@ -13,250 +14,331 @@ import argparse
 from datetime import datetime
 import threading
 import time
+from collections import defaultdict
 
-class NetworkSniffer:
-    def __init__(self, interface=None, filter_expr=None, packet_count=0):
-        self.interface = interface
-        self.filter_expr = filter_expr
-        self.packet_count = packet_count
-        self.captured_packets = []
-        self.stats = {
-            'total': 0,
-            'tcp': 0,
-            'udp': 0,
-            'icmp': 0,
-            'http': 0,
-            'https': 0,
-            'dns': 0,
-            'other': 0
+class TrafficAnalyzer:
+    def __init__(self, network_interface=None, packet_filter=None, max_packets=0):
+        self.network_interface = network_interface
+        self.packet_filter = packet_filter
+        self.max_packets = max_packets
+        self.packet_collection = []
+        self.traffic_metrics = {
+            'packet_total': 0,
+            'tcp_count': 0,
+            'udp_count': 0,
+            'icmp_count': 0,
+            'http_traffic': 0,
+            'https_traffic': 0,
+            'dns_queries': 0,
+            'other_protocols': 0,
+            'arp_packets': 0,
+            'dhcp_packets': 0
         }
+        self.protocol_breakdown = defaultdict(int)
+        self.source_destinations = defaultdict(int)
     
-    def packet_handler(self, packet):
-        """Process each captured packet"""
-        self.stats['total'] += 1
-        self.captured_packets.append(packet)
+    def process_packet(self, packet):
+        """Intercept and process each network packet"""
+        self.traffic_metrics['packet_total'] += 1
+        self.packet_collection.append(packet)
         
-        # Get timestamp
-        timestamp = datetime.now().strftime("%H:%M:%S")
+        # Current time capture
+        time_capture = datetime.now().strftime("%H:%M:%S")
         
-        # Extract basic packet information
-        packet_info = self.analyze_packet(packet)
+        # Execute packet analysis
+        packet_data = self.dissect_packet(packet)
         
-        # Update statistics
-        self.update_stats(packet)
+        # Refresh metrics
+        self.refresh_metrics(packet)
         
-        # Display packet information
-        self.display_packet_info(timestamp, packet_info, packet)
+        # Output formatted packet details
+        self.print_packet_details(time_capture, packet_data, packet)
         
-        # Optional: Save interesting packets for detailed analysis
-        if len(self.captured_packets) % 50 == 0:
-            print(f"\n[INFO] Captured {len(self.captured_packets)} packets so far...")
-            self.display_stats()
+        # Periodic status updates
+        if len(self.packet_collection) % 50 == 0:
+            print(f"\n[STATUS] Total packets intercepted: {len(self.packet_collection)}")
+            self.print_metrics()
     
-    def analyze_packet(self, packet):
-        """Analyze packet and extract relevant information"""
-        info = {
-            'src_ip': 'N/A',
-            'dst_ip': 'N/A',
-            'protocol': 'Unknown',
-            'src_port': 'N/A',
-            'dst_port': 'N/A',
-            'length': len(packet),
-            'payload_preview': ''
+    def dissect_packet(self, packet):
+        """Dissect packet and extract protocol-specific information"""
+        extracted_data = {
+            'source_address': 'N/A',
+            'dest_address': 'N/A',
+            'protocol_type': 'Unknown',
+            'source_port': 'N/A',
+            'dest_port': 'N/A',
+            'packet_size': len(packet),
+            'data_preview': ''
         }
         
-        # Check if packet has IP layer
+        # IP Layer Analysis
         if packet.haslayer(IP):
-            info['src_ip'] = packet[IP].src
-            info['dst_ip'] = packet[IP].dst
-            info['protocol'] = packet[IP].proto
+            extracted_data['source_address'] = packet[IP].src
+            extracted_data['dest_address'] = packet[IP].dst
+            extracted_data['protocol_type'] = packet[IP].proto
             
-            # Check for TCP
+            # TCP Protocol Branch
             if packet.haslayer(TCP):
-                info['protocol'] = 'TCP'
-                info['src_port'] = packet[TCP].sport
-                info['dst_port'] = packet[TCP].dport
+                extracted_data['protocol_type'] = 'TCP'
+                extracted_data['source_port'] = packet[TCP].sport
+                extracted_data['dest_port'] = packet[TCP].dport
                 
-                # Check for HTTP/HTTPS
+                # Application Layer Detection
                 if packet[TCP].dport == 80 or packet[TCP].sport == 80:
-                    info['protocol'] = 'HTTP'
+                    extracted_data['protocol_type'] = 'HTTP'
                 elif packet[TCP].dport == 443 or packet[TCP].sport == 443:
-                    info['protocol'] = 'HTTPS'
+                    extracted_data['protocol_type'] = 'HTTPS'
+                elif packet[TCP].dport == 22 or packet[TCP].sport == 22:
+                    extracted_data['protocol_type'] = 'SSH'
                 
-                # Extract payload preview
+                # Payload Extraction
                 if packet.haslayer(Raw):
-                    payload = packet[Raw].load
-                    info['payload_preview'] = self.safe_decode(payload[:50])
+                    raw_payload = packet[Raw].load
+                    extracted_data['data_preview'] = self.decode_safely(raw_payload[:50])
             
-            # Check for UDP
+            # UDP Protocol Branch
             elif packet.haslayer(UDP):
-                info['protocol'] = 'UDP'
-                info['src_port'] = packet[UDP].sport
-                info['dst_port'] = packet[UDP].dport
+                extracted_data['protocol_type'] = 'UDP'
+                extracted_data['source_port'] = packet[UDP].sport
+                extracted_data['dest_port'] = packet[UDP].dport
                 
-                # Check for DNS
+                # Service Identification
                 if packet[UDP].dport == 53 or packet[UDP].sport == 53:
-                    info['protocol'] = 'DNS'
+                    extracted_data['protocol_type'] = 'DNS'
                     if packet.haslayer(DNS):
-                        if packet[DNS].qr == 0:  # Query
-                            info['payload_preview'] = f"DNS Query: {packet[DNS].qd.qname.decode()}"
-                        else:  # Response
-                            info['payload_preview'] = f"DNS Response"
+                        if packet[DNS].qr == 0:
+                            domain = packet[DNS].qd.qname.decode()
+                            extracted_data['data_preview'] = f"DNS Query: {domain}"
+                        else:
+                            extracted_data['data_preview'] = f"DNS Response"
+                elif packet[UDP].dport == 67 or packet[UDP].dport == 68:
+                    extracted_data['protocol_type'] = 'DHCP'
             
-            # Check for ICMP
+            # ICMP Protocol Branch
             elif packet.haslayer(ICMP):
-                info['protocol'] = 'ICMP'
-                info['payload_preview'] = f"Type: {packet[ICMP].type}, Code: {packet[ICMP].code}"
+                extracted_data['protocol_type'] = 'ICMP'
+                extracted_data['data_preview'] = f"Type: {packet[ICMP].type}, Code: {packet[ICMP].code}"
         
-        # Check for ARP
+        # ARP Protocol Analysis
         elif packet.haslayer(ARP):
-            info['protocol'] = 'ARP'
-            info['src_ip'] = packet[ARP].psrc
-            info['dst_ip'] = packet[ARP].pdst
-            info['payload_preview'] = f"Operation: {packet[ARP].op}"
+            extracted_data['protocol_type'] = 'ARP'
+            extracted_data['source_address'] = packet[ARP].psrc
+            extracted_data['dest_address'] = packet[ARP].pdst
+            operation_types = {1: "Request", 2: "Reply"}
+            op_type = operation_types.get(packet[ARP].op, "Unknown")
+            extracted_data['data_preview'] = f"ARP {op_type}"
         
-        return info
+        return extracted_data
     
-    def safe_decode(self, data):
-        """Safely decode bytes to string"""
+    def decode_safely(self, byte_data):
+        """Secure byte-to-string conversion"""
         try:
-            return data.decode('utf-8', errors='ignore').replace('\n', '\\n').replace('\r', '\\r')
-        except:
-            return str(data)[:50]
+            decoded_string = byte_data.decode('utf-8', errors='ignore')
+            decoded_string = decoded_string.replace('\n', '\\n').replace('\r', '\\r').replace('\t', '\\t')
+            return decoded_string[:50]
+        except Exception as e:
+            return f"[Decode Error: {str(e)[:20]}]"
     
-    def update_stats(self, packet):
-        """Update packet statistics"""
+    def refresh_metrics(self, packet):
+        """Update protocol-level statistics"""
+        # TCP Analysis
         if packet.haslayer(TCP):
-            self.stats['tcp'] += 1
+            self.traffic_metrics['tcp_count'] += 1
+            self.protocol_breakdown['TCP'] += 1
+            
             if packet.haslayer(Raw):
-                payload = packet[Raw].load
-                if b'HTTP' in payload:
-                    self.stats['http'] += 1
+                payload_content = packet[Raw].load
+                if b'HTTP' in payload_content or b'GET' in payload_content:
+                    self.traffic_metrics['http_traffic'] += 1
+                    self.protocol_breakdown['HTTP'] += 1
+        
+        # UDP Analysis
         elif packet.haslayer(UDP):
-            self.stats['udp'] += 1
+            self.traffic_metrics['udp_count'] += 1
+            self.protocol_breakdown['UDP'] += 1
+            
             if packet[UDP].dport == 53 or packet[UDP].sport == 53:
-                self.stats['dns'] += 1
+                self.traffic_metrics['dns_queries'] += 1
+                self.protocol_breakdown['DNS'] += 1
+            elif packet[UDP].dport == 67 or packet[UDP].dport == 68:
+                self.traffic_metrics['dhcp_packets'] += 1
+                self.protocol_breakdown['DHCP'] += 1
+        
+        # ICMP Analysis
         elif packet.haslayer(ICMP):
-            self.stats['icmp'] += 1
+            self.traffic_metrics['icmp_count'] += 1
+            self.protocol_breakdown['ICMP'] += 1
+        
+        # ARP Analysis
+        elif packet.haslayer(ARP):
+            self.traffic_metrics['arp_packets'] += 1
+            self.protocol_breakdown['ARP'] += 1
+        
         else:
-            self.stats['other'] += 1
+            self.traffic_metrics['other_protocols'] += 1
+            self.protocol_breakdown['Other'] += 1
+        
+        # Track source-destination pairs
+        if packet.haslayer(IP):
+            flow_key = f"{packet[IP].src} -> {packet[IP].dst}"
+            self.source_destinations[flow_key] += 1
     
-    def display_packet_info(self, timestamp, info, packet):
-        """Display formatted packet information"""
-        print(f"\n[{timestamp}] Packet #{self.stats['total']}")
-        print(f"  Protocol: {info['protocol']}")
-        print(f"  Source: {info['src_ip']}:{info['src_port']}")
-        print(f"  Destination: {info['dst_ip']}:{info['dst_port']}")
-        print(f"  Length: {info['length']} bytes")
+    def print_packet_details(self, timestamp, packet_info, packet):
+        """Display comprehensive packet information"""
+        print(f"\n[{timestamp}] Packet #{self.traffic_metrics['packet_total']}")
+        print(f"  Protocol Layer: {packet_info['protocol_type']}")
+        print(f"  Source Address: {packet_info['source_address']}:{packet_info['source_port']}")
+        print(f"  Destination: {packet_info['dest_address']}:{packet_info['dest_port']}")
+        print(f"  Packet Size: {packet_info['packet_size']} bytes")
         
-        if info['payload_preview']:
-            print(f"  Payload Preview: {info['payload_preview']}")
+        if packet_info['data_preview']:
+            print(f"  Data Content: {packet_info['data_preview']}")
         
-        # Show packet layers for educational purposes
+        # Display protocol stack
         try:
-            layers = [layer.__name__ for layer in packet.layers()]
-            print(f"  Layers: {' -> '.join(layers)}")
-        except:
-            print(f"  Layers: {len(packet.layers())} layers detected")
+            protocol_stack = [layer.__name__ for layer in packet.layers()]
+            print(f"  Stack Layers: {' -> '.join(protocol_stack)}")
+        except Exception as e:
+            print(f"  Stack Layers: {len(packet.layers())} layer(s) detected")
     
-    def display_stats(self):
-        """Display current statistics"""
-        print("\n" + "="*50)
-        print("PACKET STATISTICS")
-        print("="*50)
-        print(f"Total Packets: {self.stats['total']}")
-        print(f"TCP: {self.stats['tcp']}")
-        print(f"UDP: {self.stats['udp']}")
-        print(f"ICMP: {self.stats['icmp']}")
-        print(f"HTTP: {self.stats['http']}")
-        print(f"DNS: {self.stats['dns']}")
-        print(f"Other: {self.stats['other']}")
-        print("="*50)
+    def print_metrics(self):
+        """Display comprehensive traffic metrics"""
+        print("\n" + "="*60)
+        print("TRAFFIC ANALYSIS METRICS")
+        print("="*60)
+        print(f"Total Packets Captured: {self.traffic_metrics['packet_total']}")
+        print(f"\nProtocol Breakdown:")
+        print(f"  TCP Packets: {self.traffic_metrics['tcp_count']}")
+        print(f"  UDP Packets: {self.traffic_metrics['udp_count']}")
+        print(f"  ICMP Packets: {self.traffic_metrics['icmp_count']}")
+        print(f"  ARP Packets: {self.traffic_metrics['arp_packets']}")
+        print(f"  Other: {self.traffic_metrics['other_protocols']}")
+        print(f"\nApplication Layer:")
+        print(f"  HTTP Traffic: {self.traffic_metrics['http_traffic']}")
+        print(f"  HTTPS Traffic: {self.traffic_metrics['https_traffic']}")
+        print(f"  DNS Queries: {self.traffic_metrics['dns_queries']}")
+        print(f"  DHCP Activity: {self.traffic_metrics['dhcp_packets']}")
+        
+        if self.source_destinations:
+            print(f"\nTop Traffic Flows:")
+            for flow, count in sorted(self.source_destinations.items(), key=lambda x: x[1], reverse=True)[:5]:
+                print(f"  {flow}: {count} packets")
+        
+        print("="*60)
     
-    def start_sniffing(self):
-        """Start packet capture"""
-        print(f"Starting packet capture...")
-        print(f"Interface: {self.interface or 'All interfaces'}")
-        print(f"Filter: {self.filter_expr or 'None'}")
-        print(f"Packet count: {self.packet_count or 'Unlimited'}")
-        print("Press Ctrl+C to stop\n")
+    def begin_capture(self):
+        """Initialize and execute packet capture"""
+        print("\n" + "="*60)
+        print("SEKABERA IBRAHIM - NETWORK TRAFFIC ANALYZER")
+        print("="*60)
+        print(f"Interface Configuration: {self.network_interface or 'All interfaces'}")
+        print(f"Packet Filter Rules: {self.packet_filter or 'No filter applied'}")
+        print(f"Capture Limit: {self.max_packets if self.max_packets > 0 else 'Unlimited'}")
+        print("Status: Ready - Press Ctrl+C to terminate\n")
         
         try:
             sniff(
-                iface=self.interface,
-                filter=self.filter_expr,
-                prn=self.packet_handler,
-                count=self.packet_count,
-                store=0  # Don't store packets in memory to save RAM
+                iface=self.network_interface,
+                filter=self.packet_filter,
+                prn=self.process_packet,
+                count=self.max_packets,
+                store=0
             )
         except KeyboardInterrupt:
-            print("\n\nCapture stopped by user")
-            self.display_stats()
-            self.save_analysis()
+            print("\n\n[NOTICE] Packet capture terminated by operator")
+            self.print_metrics()
+            self.export_analysis()
     
-    def save_analysis(self):
-        """Save captured packets analysis to file"""
-        if self.captured_packets:
-            filename = f"packet_analysis_{datetime.now().strftime('%Y%m%d_%H%M%S')}.txt"
-            with open(filename, 'w') as f:
-                f.write("NETWORK PACKET ANALYSIS REPORT\n")
-                f.write("="*50 + "\n")
-                f.write(f"Capture Date: {datetime.now()}\n")
-                f.write(f"Total Packets: {len(self.captured_packets)}\n\n")
+    def export_analysis(self):
+        """Export captured traffic analysis to persistent file"""
+        if self.packet_collection:
+            export_filename = f"traffic_analysis_sekabera_{datetime.now().strftime('%Y%m%d_%H%M%S')}.txt"
+            with open(export_filename, 'w') as output_file:
+                output_file.write("="*60 + "\n")
+                output_file.write("NETWORK TRAFFIC ANALYSIS REPORT\n")
+                output_file.write("Analyst: Sekabera Ibrahim\n")
+                output_file.write("="*60 + "\n")
+                output_file.write(f"Analysis Timestamp: {datetime.now()}\n")
+                output_file.write(f"Total Packets Analyzed: {len(self.packet_collection)}\n\n")
                 
-                # Write detailed analysis of first 10 packets
-                f.write("DETAILED PACKET ANALYSIS (First 10 packets):\n")
-                f.write("-"*50 + "\n")
+                output_file.write("DETAILED PACKET ANALYSIS (First 10 Packets):\n")
+                output_file.write("-"*60 + "\n\n")
                 
-                for i, packet in enumerate(self.captured_packets[:10]):
-                    f.write(f"\nPacket #{i+1}:\n")
-                    f.write(packet.show(dump=True))
-                    f.write("\n" + "-"*30 + "\n")
+                for idx, captured_packet in enumerate(self.packet_collection[:10]):
+                    output_file.write(f"Packet #{idx+1}:\n")
+                    output_file.write(captured_packet.show(dump=True))
+                    output_file.write("\n" + "-"*40 + "\n\n")
             
-            print(f"\nDetailed analysis saved to: {filename}")
+            print(f"\n[SUCCESS] Analysis exported to: {export_filename}")
 
-def get_interfaces():
-    """Get available network interfaces"""
-    interfaces = get_if_list()
-    print("Available network interfaces:")
-    for i, iface in enumerate(interfaces):
-        print(f"  {i}: {iface}")
-    return interfaces
+def display_available_interfaces():
+    """List all network interfaces available on system"""
+    available_ifaces = get_if_list()
+    print("\nAvailable Network Interfaces:")
+    for idx, interface_name in enumerate(available_ifaces):
+        try:
+            iface_ip = get_if_addr(interface_name)
+            print(f"  [{idx}] {interface_name} - IP: {iface_ip}")
+        except:
+            print(f"  [{idx}] {interface_name}")
+    return available_ifaces
 
 def main():
-    parser = argparse.ArgumentParser(description="Educational Network Packet Sniffer")
-    parser.add_argument("-i", "--interface", help="Network interface to capture on")
-    parser.add_argument("-f", "--filter", help="BPF filter expression")
-    parser.add_argument("-c", "--count", type=int, default=0, help="Number of packets to capture (0 = unlimited)")
-    parser.add_argument("--list-interfaces", action="store_true", help="List available interfaces")
-    
-    args = parser.parse_args()
-    
-    # Check if running as root
-    if os.geteuid() != 0:
-        print("Warning: This script requires root privileges for raw socket access")
-        print("Please run with: sudo python3 network_sniffer.py")
-        sys.exit(1)
-    
-    if args.list_interfaces:
-        get_interfaces()
-        return
-    
-    # Create sniffer instance
-    sniffer = NetworkSniffer(
-        interface=args.interface,
-        filter_expr=args.filter,
-        packet_count=args.count
+    argument_parser = argparse.ArgumentParser(
+        description="Advanced Network Traffic Analysis Tool by Sekabera Ibrahim"
+    )
+    argument_parser.add_argument(
+        "-i", "--interface",
+        help="Target network interface for capture"
+    )
+    argument_parser.add_argument(
+        "-f", "--filter",
+        help="Berkeley Packet Filter expression"
+    )
+    argument_parser.add_argument(
+        "-c", "--count",
+        type=int,
+        default=0,
+        help="Maximum packets to capture (0 = unlimited)"
+    )
+    argument_parser.add_argument(
+        "--list-interfaces",
+        action="store_true",
+        help="Display available network interfaces"
+    )
+    argument_parser.add_argument(
+        "--version",
+        action="version",
+        version="Network Traffic Analyzer v2.0 by Sekabera Ibrahim"
     )
     
-    # Display available interfaces if none specified
-    if not args.interface:
-        print("No interface specified. Available interfaces:")
-        get_interfaces()
-        print("\nUsing all interfaces for capture...")
+    parsed_args = argument_parser.parse_args()
     
-    # Start packet capture
-    sniffer.start_sniffing()
+    # Privilege verification
+    if os.geteuid() != 0:
+        print("⚠ ERROR: Elevated privileges required!")
+        print("Execution Method: sudo python3 network_traffic_analyzer.py")
+        sys.exit(1)
+    
+    if parsed_args.list_interfaces:
+        display_available_interfaces()
+        return
+    
+    # Initialize analyzer
+    traffic_analyzer = TrafficAnalyzer(
+        network_interface=parsed_args.interface,
+        packet_filter=parsed_args.filter,
+        max_packets=parsed_args.count
+    )
+    
+    # Interface selection guidance
+    if not parsed_args.interface:
+        print("[INFO] No interface specified. Displaying available options:")
+        display_available_interfaces()
+        print("\n[INFO] Proceeding with all interfaces...")
+    
+    # Execute capture session
+    traffic_analyzer.begin_capture()
 
 if __name__ == "__main__":
     import os

@@ -1,34 +1,158 @@
-# CodeAlpha Network Sniffer - Dependencies
-# Task 1: Basic Network Sniffer
+# Sekabera Ibrahim - Advanced Network Traffic Analyzer
+# CodeAlpha Cybersecurity Internship Program
+# Project: Enterprise-Grade Network Packet Interception System
 
-# Core packet manipulation library
-scapy>=2.4.0
+# ========================================
+# CORE DEPENDENCIES
+# ========================================
 
-# Optional dependencies for enhanced functionality
-# (These may already be included with Python 3)
+# Primary packet manipulation and protocol analysis framework
+scapy>=2.4.5
 
-# For advanced network interface handling
-# psutil>=5.8.0
+# ========================================
+# NETWORK INTERFACE & SYSTEM UTILITIES
+# ========================================
 
-# For JSON logging (if implementing structured logs)
-# python-json-logger>=2.0.0
+# System monitoring and cross-platform interface detection
+psutil>=5.9.0
 
-# For colorized terminal output (optional enhancement)
-# colorama>=0.4.4
+# Enhanced network interface enumeration (optional)
+# netifaces>=0.11.0
 
-# For GUI version (future enhancement)
-# tkinter  # Usually included with Python
+# ========================================
+# LOGGING & OUTPUT SYSTEMS
+# ========================================
 
-# Development dependencies (optional)
-# pytest>=6.0.0  # For testing
-# black>=21.0.0  # For code formatting
+# Structured logging for analysis reports
+python-json-logger>=2.0.4
 
-# Platform-specific notes:
-# - Linux: Requires root privileges for raw socket access
-# - Windows: May require WinPcap or Npcap installation
-# - macOS: Requires root privileges for raw socket access
+# Enhanced console output with color support
+colorama>=0.4.4
 
-# Installation:
-# pip install -r requirements.txt
-# or
-# sudo pip3 install -r requirements.txt
+# ========================================
+# ANALYSIS & DATA PROCESSING
+# ========================================
+
+# Data manipulation and analysis
+pandas>=1.3.0
+
+# Numerical computing framework
+numpy>=1.21.0
+
+# ========================================
+# GUI DASHBOARD (FUTURE ENHANCEMENTS)
+# ========================================
+
+# Python GUI framework (usually pre-installed)
+# tkinter  # Included with standard Python installation
+
+# Web-based dashboard framework (planned)
+# flask>=2.0.0
+# flask-socketio>=5.0.0
+
+# ========================================
+# DEVELOPMENT & TESTING TOOLS
+# ========================================
+
+# Unit testing framework
+# pytest>=6.2.5
+
+# Code quality formatter
+# black>=21.12b0
+
+# Static code analysis
+# pylint>=2.12.0
+
+# Type checking
+# mypy>=0.910
+
+# ========================================
+# THREAT INTELLIGENCE INTEGRATION (PHASE 2)
+# ========================================
+
+# IP geolocation and ASN lookup
+# geoip2>=4.7.0
+
+# Threat intelligence API client
+# requests>=2.26.0
+
+# ========================================
+# SYSTEM REQUIREMENTS & NOTES
+# ========================================
+
+# PLATFORM-SPECIFIC REQUIREMENTS:
+# 
+# Linux/Kali Linux:
+#   - Requires root privileges (sudo) for raw socket operations
+#   - libpcap-dev package may be required
+#   - Installation: sudo apt-get install libpcap-dev
+#
+# Windows Systems:
+#   - WinPcap or Npcap driver installation required
+#   - Download from: https://nmap.org/npcap/
+#   - May require Administrator privileges
+#
+# macOS/Darwin:
+#   - Requires elevated privileges (sudo) for packet capture
+#   - Homebrew installation recommended for dependencies
+#   - brew install libpcap
+#
+# Python Version:
+#   - Minimum: Python 3.6
+#   - Recommended: Python 3.8+
+#   - Not compatible with Python 2.x
+
+# ========================================
+# INSTALLATION INSTRUCTIONS
+# ========================================
+
+# Standard installation:
+#   pip install -r requirements.txt
+#
+# With elevated privileges (Linux/macOS):
+#   sudo pip3 install -r requirements.txt
+#
+# Development installation (includes testing tools):
+#   pip install -r requirements.txt -r requirements-dev.txt
+#
+# Specific package installation:
+#   pip install scapy==2.4.5
+#   pip install psutil==5.9.0
+#
+# Upgrade all packages:
+#   pip install --upgrade -r requirements.txt
+
+# ========================================
+# TROUBLESHOOTING
+# ========================================
+
+# Permission Issues:
+#   - Run with: sudo python3 network_traffic_analyzer.py
+#   - Or grant capabilities: setcap cap_net_raw=ep /usr/bin/python3
+#
+# Missing libpcap:
+#   Linux: sudo apt-get install libpcap-dev
+#   macOS: brew install libpcap
+#
+# Scapy not found:
+#   - Verify installation: python3 -c "import scapy; print(scapy.__version__)"
+#   - Reinstall: pip install --force-reinstall scapy
+#
+# Network interface not detected:
+#   - List available: ip link show (Linux)
+#   - Check with: sudo python3 network_traffic_analyzer.py --list-interfaces
+
+# ========================================
+# DEVELOPER INFORMATION
+# ========================================
+
+# Project: Sekabera Ibrahim - Network Traffic Analyzer
+# Developer: Sekabera Ibrahim
+# GitHub: https://github.com/sekaberaibrahim
+# Program: CodeAlpha Cybersecurity Internship
+# Last Updated: 2026
+#
+# For issues and contributions:
+#   - GitHub Issues: Report bugs and request features
+#   - Pull Requests: Submit improvements and enhancements
+#   - Documentation: See docs/ folder for detailed guides

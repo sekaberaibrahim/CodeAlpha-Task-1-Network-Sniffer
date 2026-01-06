@@ -1,4 +1,4 @@
-# Sekabera Ibrahim - Advanced Network Traffic Analyzer
+# Sekabera Ibrahim -  Network Traffic Analyzer
 # CodeAlpha Cybersecurity Internship Program
 # Project: Enterprise-Grade Network Packet Interception System
 

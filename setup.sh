@@ -1,7 +1,7 @@
 #!/bin/bash
 
 ################################################################################
-# SEKABERA IBRAHIM - ADVANCED NETWORK TRAFFIC ANALYZER
+# SEKABERA IBRAHIM -  NETWORK TRAFFIC ANALYZER
 # Installation & Configuration Script
 # CodeAlpha Cybersecurity Internship Program
 # Developer: Sekabera Ibrahim
